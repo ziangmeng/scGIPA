@@ -1,4 +1,4 @@
-cell_type,gene,route_weight,toy_gwas_p,toy_eqtl_p
+cell_type,gene,route_weight,synthetic_gwas_p,synthetic_eqtl_p
 Microglia,GENE_01,1.0,0.000630957344480193,0.0001
 Microglia,GENE_02,0.85,0.0002928644564625234,5.623413251903491e-05
 Microglia,GENE_03,0.7,0.00013593563908785255,3.1622776601683795e-05

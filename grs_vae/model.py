@@ -1,4 +1,4 @@
-"""Conditional variational model used by the public toy workflow."""
+"""Conditional variational model used by the public reference workflow."""
 
 import torch
 from torch import nn
