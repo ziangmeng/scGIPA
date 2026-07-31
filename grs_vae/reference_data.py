@@ -1,4 +1,4 @@
-"""A deliberately small synthetic AD-like dataset; no participant data are included."""
+"""A compact synthetic AD reference dataset; no participant data are included."""
 
 from pathlib import Path
 
@@ -10,8 +10,8 @@ CELL_TYPES = ["Microglia", "Astrocytes", "Excitatory_neurons"]
 STATES = ["Control", "MCI", "AD"]
 
 
-def make_toy_dataset(seed=7, cells_per_group=36, n_genes=48):
-    """Create log-count-like expression, labels and a cell-type-specific route prior."""
+def make_reference_dataset(seed=7, cells_per_group=36, n_genes=48):
+    """Create synthetic count data, labels and a cell-type-specific route prior."""
     rng = np.random.default_rng(seed)
     gene_names = np.array([f"GENE_{i:02d}" for i in range(1, n_genes + 1)])
     records, expression, priors = [], [], []
@@ -40,15 +40,15 @@ def make_toy_dataset(seed=7, cells_per_group=36, n_genes=48):
                 "cell_type": cell_type,
                 "gene": gene,
                 "route_weight": weight,
-                "toy_gwas_p": 10 ** (-(3.2 + offset / 3)),
-                "toy_eqtl_p": 10 ** (-(4.0 + offset / 4)),
+                "synthetic_gwas_p": 10 ** (-(3.2 + offset / 3)),
+                "synthetic_eqtl_p": 10 ** (-(4.0 + offset / 4)),
             })
 
     return np.vstack(expression), metadata, np.vstack(priors), gene_names, pd.DataFrame(prior_rows)
 
 
-def load_toy_dataset(directory):
-    """Load the fixed, tiny synthetic inputs distributed with the repository."""
+def load_reference_dataset(directory):
+    """Load the fixed synthetic inputs distributed with the repository."""
     directory = Path(directory)
     expression = pd.read_csv(directory / "expression_counts.csv")
     prior_matrix = pd.read_csv(directory / "route_prior_matrix.csv")

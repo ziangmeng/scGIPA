@@ -1,6 +1,6 @@
-# Synthetic toy AD inputs
+# Synthetic reference AD inputs
 
-This directory contains the fixed synthetic inputs used by `examples/run_toy_ad_demo.py`.
+This directory contains the fixed synthetic inputs used by `examples/run_reference_ad_demo.py`.
 
 - `expression_counts.csv`: 324 synthetic cells by 48 synthetic genes.
 - `metadata.csv`: broad cell type, disease state and ordered stage label.

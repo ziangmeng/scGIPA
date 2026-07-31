@@ -1,4 +1,4 @@
-"""Train the public toy GRS-VAE workflow and write compact demonstration outputs."""
+"""Train the public GRS-VAE reference workflow and write compact outputs."""
 
 from pathlib import Path
 import argparse
@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from grs_vae.model import GRSVAE, grs_vae_loss
-from grs_vae.toy_data import CELL_TYPES, STATES, load_toy_dataset, make_toy_dataset
+from grs_vae.reference_data import CELL_TYPES, STATES, load_reference_dataset, make_reference_dataset
 
 
 def set_seed(seed):
@@ -25,7 +25,7 @@ def set_seed(seed):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--outdir", type=Path, default=ROOT / "outputs" / "toy_ad_demo")
+    parser.add_argument("--outdir", type=Path, default=ROOT / "outputs" / "reference_ad_demo")
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--regenerate", action="store_true", help="Regenerate the bundled synthetic inputs from the fixed seed.")
@@ -34,11 +34,11 @@ def main():
     set_seed(args.seed)
 
     if args.regenerate:
-        counts, metadata, route_prior, genes, prior_table = make_toy_dataset(seed=args.seed)
+        counts, metadata, route_prior, genes, prior_table = make_reference_dataset(seed=args.seed)
     else:
-        counts, metadata, route_prior, genes, prior_table = load_toy_dataset(ROOT / "data" / "toy_ad")
-    metadata.to_csv(args.outdir / "toy_cell_metadata.csv", index=False)
-    prior_table.to_csv(args.outdir / "toy_route_prior.csv", index=False)
+        counts, metadata, route_prior, genes, prior_table = load_reference_dataset(ROOT / "data" / "reference_ad")
+    metadata.to_csv(args.outdir / "reference_cell_metadata.csv", index=False)
+    prior_table.to_csv(args.outdir / "reference_route_prior.csv", index=False)
 
     expression = torch.tensor(np.log1p(counts), dtype=torch.float32)
     prior = torch.tensor(route_prior, dtype=torch.float32)
@@ -82,24 +82,24 @@ def main():
             })
 
     scores = pd.DataFrame(route_rows).sort_values("route_masking_score", ascending=False)
-    scores.to_csv(args.outdir / "toy_route_scores.csv", index=False)
+    scores.to_csv(args.outdir / "reference_route_scores.csv", index=False)
     summary = scores.groupby("cell_type", as_index=False).agg(
         mean_route_score=("route_masking_score", "mean"),
         max_route_score=("route_masking_score", "max"),
         n_routes=("gene", "size"),
     )
-    summary.to_csv(args.outdir / "toy_celltype_summary.csv", index=False)
+    summary.to_csv(args.outdir / "reference_celltype_summary.csv", index=False)
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     plot = scores.sort_values("route_masking_score")
     colors = plot["cell_type"].map({"Microglia": "#4C78A8", "Astrocytes": "#59A14F", "Excitatory_neurons": "#E15759"})
     ax.barh(plot["cell_type"] + " | " + plot["gene"], plot["route_masking_score"], color=colors)
     ax.axvline(0, color="#404040", lw=0.8)
-    ax.set_xlabel("Route-masking score (toy data)")
+    ax.set_xlabel("Route-masking score (synthetic reference data)")
     ax.set_ylabel("")
-    ax.set_title("GRS-VAE toy AD workflow: cell-type-specific route scores")
+    ax.set_title("GRS-VAE reference workflow: cell-type-specific route scores")
     fig.tight_layout()
-    fig.savefig(args.outdir / "toy_route_scores.png", dpi=180)
+    fig.savefig(args.outdir / "reference_route_scores.png", dpi=180)
     print(f"Wrote demonstration outputs to: {args.outdir}")
 
 
