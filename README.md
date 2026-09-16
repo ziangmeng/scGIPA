@@ -1,213 +1,120 @@
-# GRS-VAE
+# GRS-VAE · EGRDM reference workflow
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Language](https://img.shields.io/badge/language-Python-3776AB?logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-%3E%3D2.1-EE4C2C?logo=pytorch&logoColor=white)
+[![Reference workflow](https://github.com/ziangmeng/GRS-VAE/actions/workflows/reference.yml/badge.svg)](https://github.com/ziangmeng/GRS-VAE/actions/workflows/reference.yml)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**GRS-VAE** is a route-prior variational framework for integrating disease-GWAS evidence, regulatory-QTL evidence and single-cell gene expression. Rather than ranking genes only at the locus level, GRS-VAE represents each candidate as a **cell-type-specific gene route** and asks how that route contributes to a disease-state expression contrast in the learned latent model.
+Code demonstration for **Cellular reconfiguration of Alzheimer disease genes across ageing and pathology**.
 
-This repository is a complete, lightweight **reference demonstration** of the v7.10 analytical design. It provides a reproducible synthetic AD-like benchmark, an implementation of the conditional VAE and a route-masking analysis. It does not distribute real participant-level expression, GWAS, eQTL, genotypes, model weights or restricted reference panels.
+This repository implements the current **EGRDM** expression and genetic-route model within the GRS-VAE project. It compares four brain states—young adulthood (YA), healthy ageing (HA), preclinical intermediate pathology (PCI) and Alzheimer disease (AD)—and separates two intervention readouts:
 
-## Contents
+- **I, expression-state contribution:** replace selected expression values with an earlier-state reference and recompute the model.
+- **M, genetic-route dependence:** keep expression fixed and mask selected genetically anchored inputs.
 
-- [Overview](#overview)
-- [Conceptual framework](#conceptual-framework)
-- [Reference demonstration](#reference-demonstration)
-- [Installation](#installation)
-- [Running the workflow](#running-the-workflow)
-- [Input data contract](#input-data-contract)
-- [Model architecture and objectives](#model-architecture-and-objectives)
-- [Route-masking analysis](#route-masking-analysis)
-- [Output files](#output-files)
-- [Adapting the workflow to a study](#adapting-the-workflow-to-a-study)
-- [Repository layout](#repository-layout)
-- [Citation](#citation)
+The repository includes a small synthetic training example, donor-level intervention analysis and the framework figure. Full expression datasets, GWAS/eQTL collections, LD panels and study model weights are obtained separately.
 
-## Overview
+## Framework
 
-Genome-wide association studies identify disease-associated loci, but a locus can contain many correlated variants and several plausible target genes. Regulatory-QTL studies connect variants to gene regulation, whereas single-cell transcriptomics reveals the cell populations and disease states in which those genes are active. GRS-VAE integrates these complementary layers in one conditional generative model.
+![Figure 1. EGRDM framework integrating expression, genetic anchoring and complementary counterfactual interventions.](docs/figures/fig1.png)
 
-The framework has three goals:
+**Figure 1.** Genetic associations and brain eQTL evidence define a signed gene–cell prior. Expression and cell identity are integrated with the expression-weighted route signal. Expression replacement and route masking are evaluated separately. The schematic's MCI label corresponds to PCI in the manuscript. The ordinal stage head is auxiliary; I and M use margins from the integrated four-state classifier.
 
-1. Build a gene-level regulatory prior from harmonized GWAS and eQTL evidence within a relevant cell type.
-2. Learn an expression latent space that retains cell identity and disease-state structure while incorporating that prior.
-3. Score each gene-cell route by masking its prior contribution and measuring the modeled change along a selected disease contrast.
+## Quick start
 
-The output is a ranked set of routes rather than a single global gene list. This makes it possible to distinguish, for example, a microglial candidate from the same gene acting in an astrocytic context.
+Use Python 3.10 or later in a clean environment:
 
-## Conceptual framework
-
-```text
-Disease GWAS                Regulatory QTL                 Single-cell RNA
-     │                            │                               │
-     └──── variant harmonization ─┴──── cell-type route prior ──────┤
-                                      │                              │
-                                      ▼                              ▼
-                         cell type + disease state + expression
-                                      │
-                                      ▼
-                             conditional GRS-VAE
-                                      │
-                         route present versus route masked
-                                      │
-                                      ▼
-                     cell-type-specific gene route ranking
-```
-
-For cell type `c`, gene `g` and matched variant `v`, a study-scale route prior can combine harmonized effect directions, association strength and locus-level colocalization. The reference implementation stores the resulting values in a per-cell route-prior vector. The public benchmark uses simulated values so that every intermediate file can be inspected.
-
-## Reference demonstration
-
-The bundled synthetic benchmark is small enough to run on CPU and is designed to demonstrate the complete data flow without external downloads. It contains:
-
-- **324 cells**: 36 cells in each combination of three broad cell types and three disease states.
-- **Three cell classes**: Microglia, Astrocytes and Excitatory neurons.
-- **Three ordered states**: Control, MCI and AD.
-- **48 synthetic genes** and **15 cell-type-specific routes**.
-- A count-like expression matrix, cell metadata, a route-prior matrix and a compact route-evidence table.
-
-The synthetic data-generating process includes cell-class programs and route-associated disease-state shifts. Therefore, route scoring has a known cell-context structure while remaining entirely independent of real human data.
-
-## Installation
-
-Clone the repository and create a clean Python environment:
-
-```bash
+~~~bash
 git clone https://github.com/ziangmeng/GRS-VAE.git
 cd GRS-VAE
 python -m venv .venv
-```
+~~~
 
-Activate the environment and install the required packages:
+Activate it with **source .venv/bin/activate** on macOS/Linux or **.venv\Scripts\Activate.ps1** in Windows PowerShell, then run:
 
-```bash
-# macOS/Linux
-source .venv/bin/activate
-
-# Windows PowerShell
-# .venv\Scripts\Activate.ps1
-
-python -m pip install --upgrade pip
+~~~bash
 python -m pip install -r requirements.txt
-```
+python examples/run_reference_ad_demo.py --epochs 40
+~~~
 
-The reference workflow requires Python 3.10+ and PyTorch 2.1+. It is intentionally CPU-compatible; no GPU, R installation or external genomic reference panel is required for the demonstration.
+The default demo runs on CPU without data downloads. It uses **864 synthetic cells, 24 artificial donors, three cell types, four states and 64 synthetic genes**. Donors are assigned to disjoint training, validation and test sets. Training uses only training cells; checkpoint selection uses validation cells; final predictions and interventions use test-donor pseudobulk profiles.
 
-## Running the workflow
+~~~bash
+# A short execution check
+python examples/run_reference_ad_demo.py --epochs 3 --outdir outputs/smoke
 
-Execute the end-to-end AD reference demonstration:
+# New synthetic inputs are written under this output directory
+python examples/run_reference_ad_demo.py --regenerate --seed 11 --outdir outputs/seed11
 
-```bash
-python examples/run_reference_ad_demo.py --epochs 80
-```
+# Run data-contract and intervention tests
+python -m unittest discover -s tests -v
+~~~
 
-To write results to a custom directory:
+The synthetic workflow demonstrates computation; it does not reproduce the manuscript's clinical performance or biological results.
 
-```bash
-python examples/run_reference_ad_demo.py \
-    --epochs 120 \
-    --seed 7 \
-    --outdir outputs/ad_reference_run
-```
+## What the model computes
 
-The script loads the fixed benchmark stored in `data/reference_ad/`, trains the conditional model and exports route-level results. Adding `--regenerate` recreates the synthetic input matrices from the chosen seed before training.
+For expression x and cell type c, the route signal is x multiplied elementwise by P[c], where P is the signed genetic prior. The expression latent, cell embedding and encoded route signal are added and passed to the reconstruction decoder and four-state classifier. **Disease-state labels are supervised targets, not model inputs.**
 
-## Input data contract
+For an adjacent comparison from state a to state b, define the classifier margin:
 
-The reference files define a compact input contract that can be adapted to larger studies.
+~~~text
+margin = logit(b) - logit(a)
+I = mean over target donors [original margin - expression-reset margin]
+M = mean over target donors [original margin - route-masked margin]
+~~~
 
-### Expression matrix
+Positive I or M means the original configuration supports the later-state score; negative values mean it offsets that score. These signs do not by themselves mean expression up/down regulation or a causal risk/protective effect.
 
-`expression_counts.csv` has one row per cell and one column per gene. The first column, `cell_id`, is a stable cell identifier. The example uses count-like values; the workflow applies `log1p` internally before training.
+For I, the reference is the preceding-state mean of **training-donor** pseudobulk expression within the same cell type. Both the expression encoder and expression-dependent route signal are recomputed. For M, the original expression encoding remains fixed while selected route-input coordinates are set to zero. The code also supports joint gene-set interventions.
 
-### Cell metadata
+## Inputs
 
-`metadata.csv` contains `cell_id`, `cell_type`, `state` and `stage`. `cell_type` indexes the learned cell-identity embedding. `state` indexes the categorical disease-state embedding. `stage` is a numeric ordering used by the auxiliary stage-regression objective.
+The CSV runner accepts **--data-dir PATH** with three required files:
 
-### Route-prior matrix
+| File | Rows and required fields |
+| --- | --- |
+| expression_counts.csv | One row per cell; unique cell_id, followed by count columns with unique gene names |
+| metadata.csv | cell_id, donor_id, cell_type, state, split |
+| route_prior_matrix.csv | One row per cell type; cell_type, followed by the same gene names as the expression matrix |
 
-`route_prior_matrix.csv` has the same row order and gene columns as the expression matrix. A non-zero element indicates that the gene has route-prior support in that cell's annotated cellular context. In a study-scale analysis, this matrix is assembled from cell-type-matched GWAS-QTL evidence rather than assigned synthetically.
+State labels are YA, HA, PCI, AD. Split labels are train, validation, test. A donor must belong to one state and one split; all four states must be represented in each split. The loader aligns metadata and prior axes by identifiers and rejects mismatches, missing values, negative counts and donor overlap. The bundled route_prior_evidence.csv additionally records the synthetic prior's supported routes.
 
-### Route-evidence table
+Nuclear counts are normalized to 10,000 and log1p-transformed for training. Interventions first sum raw counts within donor and cell type, then apply the same normalization. Donor–cell profiles with fewer than ten cells are excluded.
 
-`route_prior_evidence.csv` is a transparent long-format companion table. It records `cell_type`, `gene`, `route_weight`, `synthetic_gwas_p` and `synthetic_eqtl_p`. The P values are simulated and illustrate data structure only; they are not biological association statistics.
+The runner holds CSV inputs in memory. For a study-scale sparse matrix, reuse the model and intervention functions with an appropriate sparse data loader. See [study workflow and model correspondence](docs/study_workflow.md) for prior construction, study parameters and required external resources.
 
-## Model architecture and objectives
+## Outputs
 
-For a cell with log-transformed expression vector `x`, cell type `c`, disease state `s` and route-prior vector `r`, the encoder estimates a Gaussian latent representation:
+The default destination is outputs/reference_ad_demo/, excluded from version control.
 
-```text
-q(z | x) = Normal(mu(x), diag(sigma(x)^2))
-```
-
-The decoder receives both the sampled latent state and a context vector:
-
-```text
-h(c, s, r) = E_cell(c) + E_state(s) + W_route r
-x_hat = Decoder([z, h(c, s, r)])
-```
-
-`E_cell` and `E_state` are learned embeddings, while `W_route` projects the route prior into the latent context. In the reference model, optimization combines four complementary objectives:
-
-```text
-L = L_reconstruction + 0.001 L_KL + 0.35 L_state + 0.15 L_stage
-```
-
-- `L_reconstruction` preserves the observed single-cell expression profile.
-- `L_KL` regularizes the variational latent distribution.
-- `L_state` predicts the categorical disease state from the expression latent representation.
-- `L_stage` predicts the ordered disease-stage value.
-
-This construction gives the model access to expression structure, cellular context, disease-state context and the genetically informed route prior at the same time.
-
-## Route-masking analysis
-
-After training, the model encodes each cell once and decodes it under two matched contexts:
-
-```text
-x_hat_full   = Decoder([z, h(c, s, r)])
-x_hat_masked = Decoder([z, h(c, s, 0)])
-delta_route  = x_hat_full - x_hat_masked
-```
-
-For each cell type, the reference workflow estimates a Control-to-AD expression direction from the observed data. A route score is obtained by projecting the route-dependent reconstruction difference onto that gene-specific disease contrast. Positive and negative scores therefore describe how the modeled route contribution aligns with the selected contrast within its annotated cell class.
-
-## Output files
-
-The default run writes `outputs/reference_ad_demo/`:
-
-```text
-reference_cell_metadata.csv        Input metadata copied for traceability
-reference_route_prior.csv          Input evidence table copied for traceability
-reference_route_scores.csv         Per-gene, per-cell-type masking score
-reference_celltype_summary.csv     Mean, maximum and number of routes by cell type
-reference_route_scores.png         Ranked route-score visualization
-```
-
-`reference_route_scores.csv` is the central output. Each row contains the gene, its cellular context, input route weight, route-masking score and mean expression in the Control and AD benchmark states.
-
-## Adapting the workflow to a study
-
-The public benchmark is intentionally compact, but the code maps directly to a study-scale workflow. Replace the synthetic matrices with a harmonized single-cell expression matrix and metadata, then construct a route-prior matrix using a consistent reference genome, allele-aware GWAS-QTL matching and cell-type-specific regulatory evidence. The same conditional model and masking procedure can then be evaluated for contrasts appropriate to the study design, such as healthy-to-disease or early-to-late progression.
-
-For real analyses, `grs_vae/model.py` supplies the reusable conditional VAE module and `examples/run_reference_ad_demo.py` provides the minimal training and scoring template. Genome-build harmonization, locus definition, regional colocalization and cohort-specific quality control are study-specific preprocessing stages and should be recorded alongside each analysis.
+| File | Contents |
+| --- | --- |
+| donor_splits.csv | Donor membership in training, validation and test sets |
+| training_history.csv | Training and validation loss at each epoch |
+| test_donor_cell_predictions.csv | Four-state probabilities for test-donor pseudobulk profiles |
+| test_donor_predictions.csv | Donor predictions after averaging probabilities across represented cells |
+| interventions_by_donor.csv | Paired I and M for every gene and a supported-route gene set |
+| interventions_summary.csv | Donor-averaged effects, with target-donor counts |
+| model.pt | Locally generated parameters and ordered feature labels |
+| run_manifest.json | Seed, selected epoch, dimensions, input hashes, software versions and synthetic test accuracy |
 
 ## Repository layout
 
-```text
-GRS-VAE/
-├── data/reference_ad/             Fixed synthetic reference inputs
-├── examples/
-│   └── run_reference_ad_demo.py   End-to-end training and route scoring
-├── grs_vae/
-│   ├── model.py                   Conditional route-prior VAE
-│   └── reference_data.py          Synthetic benchmark generation and loading
-├── requirements.txt
-├── LICENSE
-└── README.md
-```
+~~~text
+grs_vae/                  Model, paired interventions and input handling
+examples/                 Synthetic training and intervention workflow
+data/reference_ad/        Small, explicitly synthetic inputs
+docs/figures/fig1.png      Manuscript framework figure
+docs/study_workflow.md    Correspondence to the study analysis
+tests/                    Scientific invariants and input validation
+tools/check_release.py    File-size and excluded-data checks
+~~~
 
-## Citation
+## Version and citation
 
-If you use this code, please cite the accompanying GRS-VAE manuscript when available. The framework builds on variational autoencoding and single-cell latent-variable modeling concepts, including *Auto-Encoding Variational Bayes* and *Deep generative modeling for single-cell transcriptomics*.
+Version 0.2 replaces the earlier three-state conditional demonstration with the four-state EGRDM architecture and paired I/M readouts. Earlier versions remain available in Git history. Existing v0.1 checkpoints use a different architecture and are not compatible.
+
+The reference workflow was checked with Python 3.11, PyTorch 2.3.1, NumPy 1.24.3 and pandas 2.1.4. Small floating-point differences can occur across platforms.
+
+When using this implementation, cite this repository with its commit identifier and the accompanying manuscript, **Cellular reconfiguration of Alzheimer disease genes across ageing and pathology**. A publication citation will be added when available. Code is distributed under the [MIT license](LICENSE).
