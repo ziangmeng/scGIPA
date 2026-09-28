@@ -1,4 +1,4 @@
-"""Run the four-state EGRDM reference workflow with donor-disjoint inputs."""
+"""Run the four-state ScGIPA reference workflow with donor-disjoint inputs."""
 from pathlib import Path
 import argparse
 import copy
@@ -12,8 +12,8 @@ import torch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from grs_vae.model import EGRDM, egrdm_loss, intervention_effects
-from grs_vae.reference_data import STATES, CONTRASTS, normalise_counts, make_reference_dataset, load_reference_dataset, pseudobulk
+from scgipa.model import ScGIPA, scgipa_loss, intervention_effects
+from scgipa.reference_data import STATES, CONTRASTS, normalise_counts, make_reference_dataset, load_reference_dataset, pseudobulk
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -49,14 +49,14 @@ def main():
             bb = pb[pm.cell_type.eq(c)&pm.split.eq("train")&pm.state.eq(STATES[b])]
             if len(aa)>=2 and len(bb)>=2:
                 targets[cell_ids[c],f"{STATES[a]}_to_{STATES[b]}"] = bb.mean(0)-aa.mean(0)
-    model = EGRDM(len(genes),len(cells),prior,hidden_dim=args.hidden_dim,latent_dim=args.latent_dim)
+    model = ScGIPA(len(genes),len(cells),prior,hidden_dim=args.hidden_dim,latent_dim=args.latent_dim)
     optimizer = torch.optim.AdamW(model.parameters(),lr=args.learning_rate,weight_decay=1e-4)
     best, saved, history = float("inf"), None, []
     selected_epoch = None
     for epoch in range(1,args.epochs+1):
         model.train(); losses=[]
         for indices in np.array_split(np.random.permutation(train),max(1,int(np.ceil(len(train)/128)))):
-            loss=egrdm_loss(model,model(x[indices],cell[indices]),x[indices],state[indices],targets)
+            loss=scgipa_loss(model,model(x[indices],cell[indices]),x[indices],state[indices],targets)
             optimizer.zero_grad();loss.backward();torch.nn.utils.clip_grad_norm_(model.parameters(),5);optimizer.step()
             losses.append(float(loss.detach()))
         model.eval()
@@ -109,7 +109,7 @@ def main():
     torch.save(dict(state_dict=saved,genes=genes,cell_types=cells,states=STATES,
                     hidden_dim=args.hidden_dim,latent_dim=args.latent_dim),args.outdir/"model.pt")
     files=["expression_counts.csv","metadata.csv","route_prior_matrix.csv"]
-    run=dict(seed=args.seed,epochs=args.epochs,selected_epoch=selected_epoch,n_cells=len(meta),n_genes=len(genes),
+    run=dict(method="scGIPA", software_version="0.3.0", seed=args.seed,epochs=args.epochs,selected_epoch=selected_epoch,n_cells=len(meta),n_genes=len(genes),
              n_donors=meta.donor_id.nunique(),test_donors=len(donor),
              test_accuracy=float(donor.prediction.eq(donor.state).mean()),
              hidden_dim=args.hidden_dim,latent_dim=args.latent_dim,learning_rate=args.learning_rate,

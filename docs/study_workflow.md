@@ -7,7 +7,7 @@ Synthetic outputs are not estimates from the study cohort.
 
 The implementation follows the expression encoder, cell embedding, signed
 expression-weighted route encoder, integrated decoder and four-state classifier
-used by EGRDM. Disease labels are targets of the classifier and auxiliary stage
+used by scGIPA. Disease labels are targets of the classifier and auxiliary stage
 loss; they are not inputs to the encoder, decoder or classifier.
 
 The auxiliary stage target is 0, 1 and 2 for HA, PCI and AD. YA contributes to
@@ -52,7 +52,7 @@ effects need not equal sums of single-gene effects.
 
 The model consumes a cell-type by gene matrix of signed weights. The study
 constructs this matrix from AD GWAS association, MAGMA gene and cell-property
-results, and brain eQTL evidence with allele harmonization and LD matching.
+results, and cell-type-specific single-cell cis-eQTL evidence from SingleBrain, with allele harmonization and LD matching. Direct matching uses the same variant; proxy matching uses r² ≥ 0.8. Both GWAS and eQTL associations meet P ≤ 10⁻³. BrainMeta cortical cis-eQTLs supplement cell types lacking SingleBrain coverage.
 Signed gene scores are weighted by evidence source, MAGMA gene Z and positive
 cell-property coefficients. Source weights are 1.0 for direct cell-type eQTL,
 0.8 for LD-proxy cell-type eQTL and 0.4 for bulk-cortex evidence. At repeated
@@ -69,8 +69,7 @@ it is not a substitute for a harmonized study prior.
 
 - Hippocampal transcriptomes: GSE268609; DOI 10.1038/s41586-026-10169-4.
 - AD GWAS: GWAS Catalog accession GCST90704646.
-- Cell-type regulatory evidence: SingleBrain and the brain eQTL resources
-  specified in the accompanying manuscript.
+- Cell-type regulatory evidence: SingleBrain single-cell cis-eQTLs and BrainMeta cortical cis-eQTLs, as specified in the accompanying manuscript.
 - Functional enrichment: g:Profiler; module membership and analysis criteria
   are described in the manuscript methods.
 

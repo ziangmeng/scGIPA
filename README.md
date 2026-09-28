@@ -1,13 +1,13 @@
-# GRS-VAE · EGRDM reference workflow
+# scGIPA
 
-[![Reference workflow](https://github.com/ziangmeng/GRS-VAE/actions/workflows/reference.yml/badge.svg)](https://github.com/ziangmeng/GRS-VAE/actions/workflows/reference.yml)
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
+[![Reference workflow](https://github.com/ziangmeng/scGIPA/actions/workflows/reference.yml/badge.svg)](https://github.com/ziangmeng/scGIPA/actions/workflows/reference.yml)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Code demonstration for **Cellular reconfiguration of Alzheimer disease genes across ageing and pathology**.
+Code demonstration for **Cellular reconfiguration of Alzheimer’s disease genetic susceptibility across ageing and pathology**.
 
-This repository implements the current **EGRDM** expression and genetic-route model within the GRS-VAE project. It compares four brain states—young adulthood (YA), healthy ageing (HA), preclinical intermediate pathology (PCI) and Alzheimer disease (AD)—and separates two intervention readouts:
+This repository implements **single-cell Genetically Informed Perturbation Analysis (scGIPA)**. It compares four brain states—young adulthood (YA), healthy ageing (HA), preclinical intermediate pathology (PCI) and Alzheimer disease (AD)—and separates two intervention readouts:
 
 - **I, expression-state contribution:** replace selected expression values with an earlier-state reference and recompute the model.
 - **M, genetic-route dependence:** keep expression fixed and mask selected genetically anchored inputs.
@@ -16,24 +16,24 @@ The repository includes a small synthetic training example, donor-level interven
 
 ## Framework
 
-![Figure 1. EGRDM framework integrating expression, genetic anchoring and complementary counterfactual interventions.](docs/figures/fig1.png)
+![Figure 1. scGIPA framework integrating expression, genetic anchoring and complementary counterfactual interventions.](docs/figures/fig1.png)
 
-**Figure 1.** Genetic associations and brain eQTL evidence define a signed gene–cell prior. Expression and cell identity are integrated with the expression-weighted route signal. Expression replacement and route masking are evaluated separately. The schematic's MCI label corresponds to PCI in the manuscript. The ordinal stage head is auxiliary; I and M use margins from the integrated four-state classifier.
+**Figure 1.** Genetic associations and brain eQTL evidence define a signed gene–cell prior. Expression and cell identity are integrated with the expression-weighted route signal. Expression replacement and route masking are evaluated separately. The ordinal stage head is auxiliary; I and M use margins from the integrated four-state classifier.
 
 ## Quick start
 
 Use Python 3.10 or later in a clean environment:
 
 ~~~bash
-git clone https://github.com/ziangmeng/GRS-VAE.git
-cd GRS-VAE
+git clone https://github.com/ziangmeng/scGIPA.git
+cd scGIPA
 python -m venv .venv
 ~~~
 
 Activate it with **source .venv/bin/activate** on macOS/Linux or **.venv\Scripts\Activate.ps1** in Windows PowerShell, then run:
 
 ~~~bash
-python -m pip install -r requirements.txt
+python -m pip install -e .
 python examples/run_reference_ad_demo.py --epochs 40
 ~~~
 
@@ -54,7 +54,7 @@ The synthetic workflow demonstrates computation; it does not reproduce the manus
 
 ## What the model computes
 
-For expression x and cell type c, the route signal is x multiplied elementwise by P[c], where P is the signed genetic prior. The expression latent, cell embedding and encoded route signal are added and passed to the reconstruction decoder and four-state classifier. **Disease-state labels are supervised targets, not model inputs.**
+For expression x and cell type c, the route signal is x multiplied elementwise by P[c], where P is the signed genetic prior. The study prior links AD GWAS signals to genes using cell-type-specific single-cell cis-eQTL evidence from SingleBrain, with BrainMeta cortical cis-eQTL evidence supplementing cell types without SingleBrain coverage. The prior is prepared before model training; M is then calculated by masking its expression-weighted inputs. The expression latent, cell embedding and encoded route signal are added and passed to the reconstruction decoder and four-state classifier. **Disease-state labels are supervised targets, not model inputs.**
 
 For an adjacent comparison from state a to state b, define the classifier margin:
 
@@ -102,7 +102,8 @@ The default destination is outputs/reference_ad_demo/, excluded from version con
 ## Repository layout
 
 ~~~text
-grs_vae/                  Model, paired interventions and input handling
+scgipa/                   Model, paired interventions and input handling
+grs_vae/                  Compatibility imports for existing scripts
 examples/                 Synthetic training and intervention workflow
 data/reference_ad/        Small, explicitly synthetic inputs
 docs/figures/fig1.png      Manuscript framework figure
@@ -113,8 +114,8 @@ tools/check_release.py    File-size and excluded-data checks
 
 ## Version and citation
 
-Version 0.2 replaces the earlier three-state conditional demonstration with the four-state EGRDM architecture and paired I/M readouts. Earlier versions remain available in Git history. Existing v0.1 checkpoints use a different architecture and are not compatible.
+Version 0.3 names the implementation **scGIPA**, updates the framework figure and manuscript title, and adds an installable Python package. The model architecture, I/M definitions and synthetic inputs are unchanged from v0.2. Existing `grs_vae.EGRDM` and `grs_vae.model.egrdm_loss` imports remain supported; new code should use `scgipa.ScGIPA` and `scgipa.scgipa_loss`. v0.2 state-dictionary checkpoints remain compatible. See [the changelog](CHANGELOG.md).
 
 The reference workflow was checked with Python 3.11, PyTorch 2.3.1, NumPy 1.24.3 and pandas 2.1.4. Small floating-point differences can occur across platforms.
 
-When using this implementation, cite this repository with its commit identifier and the accompanying manuscript, **Cellular reconfiguration of Alzheimer disease genes across ageing and pathology**. A publication citation will be added when available. Code is distributed under the [MIT license](LICENSE).
+When using this implementation, cite this repository with its commit identifier and the accompanying manuscript, **Cellular reconfiguration of Alzheimer’s disease genetic susceptibility across ageing and pathology**. A publication citation will be added when available. Code is distributed under the [MIT license](LICENSE).

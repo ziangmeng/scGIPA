@@ -5,14 +5,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-from grs_vae import EGRDM, intervention_effects
-from grs_vae.reference_data import make_reference_dataset, load_reference_dataset, pseudobulk
+from scgipa import ScGIPA, intervention_effects
+from scgipa.reference_data import make_reference_dataset, load_reference_dataset, pseudobulk
 
 class Interventions(unittest.TestCase):
     def setUp(self):
         torch.set_num_threads(1); torch.manual_seed(11)
         self.prior=torch.tensor([[1.,-.5,0.,.8],[.7,0.,-.3,1.]])
-        self.model=EGRDM(4,2,self.prior,hidden_dim=16,latent_dim=4).eval()
+        self.model=ScGIPA(4,2,self.prior,hidden_dim=16,latent_dim=4).eval()
         self.x=torch.rand(3,4);self.cell=torch.tensor([0,1,0]);self.reference=torch.rand(4)
 
     def test_interventions_match_explicit_branch_calculation(self):
